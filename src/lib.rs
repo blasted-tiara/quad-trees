@@ -57,6 +57,14 @@ impl Universe {
     pub fn render(&self) -> String {
         self.to_string()
     }
+
+    pub fn particle_count(&self) -> usize {
+        self.particles.len()
+    }
+
+    pub fn particle_ptr(&self) -> *const Vector2 {
+        self.particles.as_ptr()
+    }
 }
 
 impl fmt::Display for Universe {
