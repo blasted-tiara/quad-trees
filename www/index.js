@@ -5,11 +5,11 @@ const UNIVERSE_WIDTH = 80.0;
 const UNIVERSE_HEIGHT = 80.0;
 const UNIVERSE_PARTICLE_COUNT = 600;
 
-const PARTICLE_RADIUS = 2.0;
+const PARTICLE_RADIUS = 3.0;
 const PARTICLE_COLOR = '#999999';
 
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 800;
+const CANVAS_WIDTH = 1000;
+const CANVAS_HEIGHT = 1000;
 
 const universe = Universe.new(UNIVERSE_WIDTH, UNIVERSE_HEIGHT, UNIVERSE_PARTICLE_COUNT);
 const particle_count = universe.particle_count();
@@ -27,6 +27,7 @@ const renderLoop = () => {
 }
 
 const drawParticles = () => {
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     const particlesPtr = universe.particle_ptr();
     const particles = new Float32Array(memory.buffer, particlesPtr, particle_count);
 
