@@ -69,14 +69,14 @@ impl fmt::Display for Universe {
                 let up = j as f32 * self.height / 20.0;
                 let down = (j + 1) as f32 * self.height / 20.0;
 
-                let mut symbol =  '◻';
+                let mut symbol = "◻ ";
                 for particle in self.particles.as_slice() {
                     if 
                         particle.x < right && 
                         particle.x > left &&
                         particle.y < down &&
                         particle.y > up {
-                            symbol = '◼';
+                            symbol = "◼ ";
                             break;
                     }
                 }
