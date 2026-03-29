@@ -3,7 +3,7 @@ import { memory } from 'quad-trees/quad_trees_bg.wasm';
 
 const UNIVERSE_WIDTH = 80.0;
 const UNIVERSE_HEIGHT = 80.0;
-const UNIVERSE_PARTICLE_COUNT = 600;
+const UNIVERSE_PARTICLE_COUNT = 100;
 
 const PARTICLE_RADIUS = 3.0;
 const PARTICLE_COLOR = '#999999';
@@ -55,6 +55,24 @@ const vertexBuffer = device.createBuffer({
 
 device.queue.writeBuffer(vertexBuffer, /*bufferOffset=*/0, vertices);
 
+const particlesPtr = universe.particle_ptr();
+const particlesUniformArray = new Float32Array(memory.buffer, particlesPtr, particle_count * 2);
+
+const particlesUniformBuffer = device.createBuffer({
+    label: "Particle Positions",
+    size: particlesUniformArray.byteLength,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+device.queue.writeBuffer(particlesUniformBuffer, 0, particlesUniformArray);
+
+const universeSizeUniformArray = new Float32Array([UNIVERSE_WIDTH, UNIVERSE_HEIGHT]);
+const universeSizeUniformBuffer = device.createBuffer({
+    label: "Universe Size",
+    size: universeSizeUniformArray.byteLength,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+device.queue.writeBuffer(universeSizeUniformBuffer, 0, universeSizeUniformArray);
+
 const vertexBufferLayout = {
     arrayStride: 8,
     attributes: [{
@@ -64,17 +82,35 @@ const vertexBufferLayout = {
     }],
 };
 
+
+// @group(0) @binding(0) var<uniform> positions: vec2f;
 const cellShaderModule = device.createShaderModule({
     label: "Cell shader",
     code: `
+    struct VertexInput {
+        @location(0) pos: vec2f,
+        @builtin(instance_index) instance: u32,
+    };
+
+    struct VertexOutput {
+        @builtin(position) pos: vec4f,
+        @location(0) cell: vec2f,
+    };
+
+    @group(0) @binding(0) var<uniform> positions: array<f32, ${particle_count * 2}>;
+    @group(0) @binding(1) var<uniform> universe_size: vec2f;
+
     @vertex
-    fn vertexMain(@location(0) pos: vec2f) -> @builtin(position) vec4f {
-        return vec4f(pos, 0, 1);
+    fn vertexMain(input: VertexInput) -> VertexOutput {
+        var output: VertexOutput;
+        output.pos = vec4f(input.pos / 70 + (vec2f(positions[input.instance], positions[input.instance + 1]) / universe_size * 2) - 1, 0, 1);
+        output.cell = vec2f(1, 1);
+        return output;
     }
 
     @fragment
-    fn fragmentMain() -> @location(0) vec4f {
-        return vec4f(1, 0, 0, 1);
+    fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+        return vec4f((input.pos.x + 1) / 1024, (input.pos.y + 1) / 1024, 0, 1);
     }
   `
 });
@@ -96,6 +132,21 @@ const cellPipeline = device.createRenderPipeline({
     }
 });
 
+const bindGroup = device.createBindGroup({
+    label: "Cell renderer bind group",
+    layout: cellPipeline.getBindGroupLayout(0),
+    entries: [
+        {
+            binding: 0,
+            resource: { buffer: particlesUniformBuffer }
+        }, 
+        {
+            binding: 1,
+            resource: { buffer: universeSizeUniformBuffer }
+        }
+    ],
+});
+
 const encoder = device.createCommandEncoder();
 
 const renderLoop = () => {
@@ -110,7 +161,10 @@ const renderLoop = () => {
 
     pass.setPipeline(cellPipeline);
     pass.setVertexBuffer(0, vertexBuffer);
-    pass.draw(vertices.length / 2); // 6 vertices
+
+    pass.setBindGroup(0, bindGroup);
+
+    pass.draw(vertices.length / 2, UNIVERSE_PARTICLE_COUNT); // 6 vertices
 
     //draw();
     //universe.tick();
