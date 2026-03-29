@@ -94,7 +94,7 @@ const cellShaderModule = device.createShaderModule({
 
     struct VertexOutput {
         @builtin(position) pos: vec4f,
-        @location(0) cell: vec2f,
+        @location(0) clip_space_pos: vec2f,
     };
 
     @group(0) @binding(0) var<uniform> positions: array<f32, ${particle_count * 2}>;
@@ -104,13 +104,13 @@ const cellShaderModule = device.createShaderModule({
     fn vertexMain(input: VertexInput) -> VertexOutput {
         var output: VertexOutput;
         output.pos = vec4f(input.pos / 70 + (vec2f(positions[input.instance], positions[input.instance + 1]) / universe_size * 2) - 1, 0, 1);
-        output.cell = vec2f(1, 1);
+        output.clip_space_pos = vec2f(output.pos.x, output.pos.y);
         return output;
     }
 
     @fragment
-    fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-        return vec4f((input.pos.x + 1) / 1024, (input.pos.y + 1) / 1024, 0, 1);
+    fn fragmentMain(@location(0) clip_space_pos: vec2f) -> @location(0) vec4f {
+        return vec4f((clip_space_pos.x + 1) / 2, (clip_space_pos.y + 1) / 2, 0, 1);
     }
   `
 });
